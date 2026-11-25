@@ -452,6 +452,7 @@ nameInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !goBtn.dis
 function onWelcome(m) {
   myId = m.id; world = m;
   setMapData(m.map);
+  if (m.sendHz && m.sendHz < 50) INTERP_MS = 110; // fewer updates (cloud): keep a bigger smoothing buffer
   $('#join').classList.add('hidden');
   if (TV) { zoomIdx = 0; return; }
   joined = true;
@@ -1004,7 +1005,7 @@ function drawParticles() {
 }
 
 // ================= Interpolation (smooth movement between server updates) =================
-const INTERP_MS = 70;
+let INTERP_MS = 70; // other tanks are shown slightly in the past so they always move smoothly
 const lerp = (a, b, f) => a + (b - a) * f;
 const lerpAng = (a, b, f) => a + (Math.atan2(Math.sin(b - a), Math.cos(b - a))) * f;
 function viewState(now) {

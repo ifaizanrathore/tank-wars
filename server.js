@@ -12,6 +12,9 @@ const QRCode = require('qrcode');
 const { exec } = require('child_process');
 
 let PORT = Number(process.env.PORT) || 5050;
+// Updates sent to phones per second. Cloud free plans have little CPU, so send fewer there.
+const ON_CLOUD = !!(process.env.RENDER || process.env.SPACE_ID); // Render or Hugging Face Spaces
+const SEND_HZ = Number(process.env.SEND_HZ) || (ON_CLOUD ? 30 : 60);
 
 // ===== Game tuning (change these to tweak the feel) =====
 const W = 1280, H = 720, T = 20;          // arena size, wall thickness
@@ -590,7 +593,10 @@ function updatePlayer(p, dt) {
     if (p.respawnT <= 0) spawnPlayer(p);
     return;
   }
-  if (p.bot && phase !== 'over') botThink(p, dt);
+  if (p.bot && phase !== 'over') { // bots decide 20 times a second (saves CPU)
+    p.botAcc = (p.botAcc || 0) + dt;
+    if (p.botAcc >= 0.05) { botThink(p, p.botAcc); p.botAcc = 0; }
+  }
   const cl = CLASSES[p.cls];
   const speedMul = cl.speed * (p.streak >= ON_FIRE_STREAK ? 1.12 : 1);
 
@@ -1127,7 +1133,7 @@ function sendWelcome(ws, id) {
   send(ws, {
     t: 'w', id, W, H, tankR: TANK_R, map: mapInfo(),
     phys: { T, TANK_R, TANK_SPEED, TURN_SPEED, ACCEL, ICE_ACCEL, BOOST_SPEED, BOOST_TIME, BOOST_CD },
-    classes: CLASSES, times: TIME_CHOICES, modes: MODES, unlocks: UNLOCKS, maxPlayers: MAX_PLAYERS,
+    classes: CLASSES, times: TIME_CHOICES, modes: MODES, unlocks: UNLOCKS, maxPlayers: MAX_PLAYERS, sendHz: SEND_HZ,
     maps: MAP_IDS.map(mid => ({ id: mid, name: MAPS[mid].name })),
   });
 }
@@ -1226,13 +1232,14 @@ function broadcastState() {
 }
 
 resetCrates();
-let last = process.hrtime.bigint();
+let last = process.hrtime.bigint(), sendAcc = 0;
 setInterval(() => {
   const t = process.hrtime.bigint();
   const dt = Math.min(Number(t - last) / 1e9, 0.05);
   last = t;
   update(dt);
-  broadcastState(); // ~60 per second
+  sendAcc += dt;
+  if (sendAcc >= 1 / SEND_HZ - 0.002) { sendAcc = 0; broadcastState(); }
 }, 1000 / 60);
 
 // If the port is taken by another app, try the next one
