@@ -1,0 +1,17 @@
+{
+  "name": "tank-wars",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local multiplayer tank deathmatch for up to 6 phones on the same Wi-Fi",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,11 @@
+# Render.com setup for Tank Wars (free plan)
+services:
+  - type: web
+    name: tank-wars
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NO_OPEN
+        value: "1"
